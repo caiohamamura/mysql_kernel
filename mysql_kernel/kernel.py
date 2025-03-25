@@ -98,6 +98,8 @@ class MysqlKernel(Kernel):
                         if l.count('@')>1:
                             self.output("Connection failed, The Mysql address cannot have two '@'.")
                         else:
+                            print(l)
+                            self.output(l)
                             self.engine = sa.create_engine(f'mysql+py{v}')
                     elif l.startswith('create database '):
                         self.create_db(v)
@@ -117,14 +119,20 @@ class MysqlKernel(Kernel):
                         self.insert_into(v)
                     else:
                         if self.engine:
-                            if ' like ' in l:
-                                if l[l.find(' like ')+6:].count('%')<4:
-                                    self.output("sql code ' like %xx%' should be replace ' like %%xx%%'.")
-                                    return self.ok()
+                            v = re.sub('(?<!%)%(?!%)', '%%', v)
                             if l.startswith('select ') and 'limit ' not in l:
-                                output = pd.read_sql(f'{v} limit 1000', self.engine).to_html()
+                                v = f'{v} limit 1000'
+                                results = pd.read_sql(v, self.engine)
+                                if results.shape[0] == 1000:
+                                    output = f'''
+                                        <p>Results limitted to 1000 (explicitly add LIMIT to display beyond that)</p>
+                                        {results.to_html()}
+                                        '''
+                                else:
+                                    output = results.to_html()
                             else:
                                 output = pd.read_sql(v, self.engine).to_html()
+                            output = f'''<div style='max-height: 500px; overflow: auto; width: 100%'>{output}</div>'''
                         else:
                             output = 'Unable to connect to Mysql server. Check that the server is running.'
             self.output(output)

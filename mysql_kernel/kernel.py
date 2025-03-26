@@ -40,10 +40,8 @@ class MysqlKernel(Kernel):
     
     def generic_ddl(self, query, msg):
         try:
-            with self.engine.connect() as con:
+            with self.engine.begin() as con:
                 result = con.execute(sa.sql.text(query))
-                if callable(getattr(con, 'commit', None)):
-                    con.commit()
                 split_query = query.split()
                 if len(split_query) > 2:
                     object_name = re.match("([^ ]+ ){2}(if (not )?exists )?([^ ]+)", query, re.IGNORECASE).group(4)

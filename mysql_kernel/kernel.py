@@ -42,7 +42,8 @@ class MysqlKernel(Kernel):
         try:
             with self.engine.connect() as con:
                 result = con.execute(sa.sql.text(query))
-                con.commit()
+                if callable(getattr(con, 'commit', None)):
+                    con.commit()
                 split_query = query.split()
                 if len(split_query) > 2:
                     object_name = re.match("([^ ]+ ){2}(if (not )?exists )?([^ ]+)", query, re.IGNORECASE).group(4)
@@ -92,15 +93,16 @@ class MysqlKernel(Kernel):
         try:
             for v in sql.split(";"):
                 v = v.rstrip()
+                v = re.sub('^[ \r\n\t]+', '', v)
+                v = re.sub('\n *--.*\n', '', v) # remove comments
                 l = v.lower()
                 if len(l)>0:
                     if l.startswith('mysql://'):
                         if l.count('@')>1:
                             self.output("Connection failed, The Mysql address cannot have two '@'.")
                         else:
-                            print(l)
-                            self.output(l)
                             self.engine = sa.create_engine(f'mysql+py{v}')
+                            self.output('Connected successfully!')
                     elif l.startswith('create database '):
                         self.create_db(v)
                     elif l.startswith('drop database '):
@@ -135,7 +137,7 @@ class MysqlKernel(Kernel):
                             output = f'''<div style='max-height: 500px; overflow: auto; width: 100%'>{output}</div>'''
                         else:
                             output = 'Unable to connect to Mysql server. Check that the server is running.'
-            self.output(output)
+                        self.output(output)
             return self.ok()
         except Exception as msg:
             self.output(str(msg))

@@ -94,7 +94,7 @@ class MysqlKernel(Kernel):
             for v in sql.split(";"):
                 v = v.rstrip()
                 v = re.sub('^[ \r\n\t]+', '', v)
-                v = re.sub('\n *--.*\n', '', v) # remove comments
+                v = re.sub('\n* *--.*\n', '', v) # remove comments
                 l = v.lower()
                 if len(l)>0:
                     if l.startswith('mysql://'):

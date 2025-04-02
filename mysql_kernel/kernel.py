@@ -15,7 +15,7 @@ __version__ = '0.4.1'
 
 class FixedWidthHtmlFormatter(HtmlFormatter):
 
-    def wrap(self, source):
+    def wrap(self, source, outfile=None):
         return self._wrap_code(source)
 
     def _wrap_code(self, source):

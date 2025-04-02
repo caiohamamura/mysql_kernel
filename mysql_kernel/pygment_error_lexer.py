@@ -16,7 +16,7 @@ class SqlErrorLexer(RegexLexer):
         'root': [
             (r"(ERROR)(.*Table ')([^']+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Class)),
             (r"(ERROR)(.*column ')([^']+)(.*in ')([^']+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Class, Token.Generic, Token.Name.Builtin)),
-            (r"(ERROR)(.*near ')([^']+)(.*line [0-9]+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Builtin, Token.Number)),
+            (r"(ERROR)(.*near ['\"])([^'\"]+)(.*line [0-9]+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Builtin, Token.Number)),
             (r"(ERROR)(.*database ')([^']+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Class)),
         ]
     }

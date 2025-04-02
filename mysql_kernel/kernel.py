@@ -15,7 +15,7 @@ __version__ = '0.4.1'
 
 class FixedWidthHtmlFormatter(HtmlFormatter):
 
-    def wrap(self, source, *, include_div):
+    def wrap(self, source):
         return self._wrap_code(source)
 
     def _wrap_code(self, source):
@@ -190,9 +190,9 @@ class MysqlKernel(Kernel):
             return self.handle_error(e)
         
     def handle_error(self, e): 
-        search_res = re.search(r'\d+,[^"\']*["\']([^"\']+)', e.args[0]).group(1)
+        search_res = re.search(r'\d+,[^"\']*["\']([^"\']+)', e.args[0])
         msg = str(e)
-        if search_res and search_res.last_index >= 1:
+        if search_res and search_res.lastindex >= 1:
             msg = search_res.group(1)
 
         # Convert to HTML with Pygments

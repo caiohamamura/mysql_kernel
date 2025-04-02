@@ -115,6 +115,7 @@ class MysqlKernel(Kernel):
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
         self.silent = silent
+        res = {}
         output = ''
         if not code.strip():
             return self.ok()
@@ -139,21 +140,21 @@ class MysqlKernel(Kernel):
                             
                             
                     elif l.startswith('create database '):
-                        return self.create_db(v)
+                        res = self.create_db(v)
                     elif l.startswith('drop database '):
-                        return self.drop_db(v)
+                        res = self.drop_db(v)
                     elif l.startswith('create table '):
-                        return self.create_table(v)
+                        res = self.create_table(v)
                     elif l.startswith('drop table '):
-                        return self.drop_table(v)
+                        res = self.drop_table(v)
                     elif l.startswith('delete '):
-                        return self.delete(v)
+                        res = self.delete(v)
                     elif l.startswith('alter table '):
-                        return self.alter_table(v)
+                        res = self.alter_table(v)
                     elif l.startswith('use '):
-                        return self.use_db(v)
+                        res = self.use_db(v)
                     elif l.startswith('insert into '):
-                        return self.insert_into(v)
+                        res = self.insert_into(v)
                     else:
                         if self.engine:
                             v = re.sub('(?<!%)%(?!%)', '%%', v)
@@ -182,6 +183,8 @@ class MysqlKernel(Kernel):
                         else:
                             output = 'Unable to connect to Mysql server. Check that the server is running.'
                         self.output(output, plain_text = results_raw if results_raw else output)
+                if res and 'status' in res.keys() and res['status'] == 'error':
+                    return res
             return self.ok()
         except Exception as e:
             return self.handle_error(e)

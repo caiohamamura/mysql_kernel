@@ -1,5 +1,6 @@
 from pygments.lexer import RegexLexer, bygroups
 from pygments.token import *
+import re
 
 __all__ = ['SqlErrorLexer']
 
@@ -12,12 +13,17 @@ class SqlErrorLexer(RegexLexer):
     aliases = ['sqlerror']
     filenames = ['*.sqlerror']
 
+    flags = re.IGNORECASE
     tokens = {
         'root': [
-            (r"(ERROR)(.*Table ')([^']+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Class)),
-            (r"(ERROR)(.*column ')([^']+)(.*in ')([^']+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Class, Token.Generic, Token.Name.Builtin)),
-            (r"(ERROR)(.*near ['\"])([^'\"]+)(.*line [0-9]+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Builtin, Token.Number)),
-            (r"(ERROR)(.*database ')([^']+)", bygroups(Token.Generic.Deleted, Token.Generic, Token.Name.Class)),
+            (r"^ERROR", Token.Generic.Deleted),
+            (r"(?<=table [\"'])[^\"']+", Token.Name.Class),
+            (r"(?<=relation [\"'])[^\"']+", Token.Name.Class),
+            (r"(?<=column [\"'])[^\"']+", Token.Name.Class),
+            (r"(?<=column )[^ \"]+", Token.Name.Class),
+            (r"(?<=database [\"'])[^\"']+", Token.Name.Class),
+            (r"(?<=near [\"'])[^\"']+", Token.Name.Builtin),
+            (r"line [0-9]+", Token.Number),
         ]
     }
 

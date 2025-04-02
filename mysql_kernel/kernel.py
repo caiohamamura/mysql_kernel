@@ -109,7 +109,7 @@ class MysqlKernel(Kernel):
     
     def use_db(self, query):
         new_database = re.match("use ([^ ]+)", query, re.IGNORECASE).group(1)
-        self.engine = sa.create_engine(self.engine.url.set(database=new_database))
+        self.engine = sa.create_engine(self.engine.url.set(database=new_database), isolation_level='AUTOCOMMIT')
         self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
         return self.generic_ddl(query, 'Changed to database %s successfully.')
 
@@ -128,13 +128,13 @@ class MysqlKernel(Kernel):
                 v = re.sub('\n* *--.*\n', '', v) # remove comments
                 l = v.lower()
                 if len(l)>0:
-                    if l.startswith('mysql://'):
+                    if re.search('\w+://', l):
                         if l.count('@')>1:
                             self.output("Connection failed, The Mysql address cannot have two '@'.")
                         else:
                             if v.startswith('mysql://'):
                                 v = v.replace('mysql://', 'mysql+pymysql://')
-                            self.engine = sa.create_engine(v)
+                            self.engine = sa.create_engine(v, isolation_level='AUTOCOMMIT')
                             self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
                             self.output('Connected successfully!')
                             
@@ -190,13 +190,16 @@ class MysqlKernel(Kernel):
             return self.handle_error(e)
         
     def handle_error(self, e): 
-        search_res = re.search(r'\d+,[^"\']*["\']([^"\']+)', e.args[0])
+        search_res = re.search(r'\d+, *["\'](.*)(?=["\']\))', e.args[0])
         msg = str(e)
-        if search_res and search_res.lastindex >= 1:
+        if search_res and len(search_res.groups()) > 0:
             msg = search_res.group(1)
 
+        msg = re.sub(r'\[SQL:.*', '', msg)
+        msg = re.sub(r'\(Background on this error at.*', '', msg)
+
         # Convert to HTML with Pygments
-        formatter = FixedWidthHtmlFormatter(full=True, style=ThisStyle, traceback=False)
+        formatter = FixedWidthHtmlFormatter(noclasses=True, style=ThisStyle, traceback=False)
         tb_html = highlight("ERROR: " + msg, SqlErrorLexer(), formatter)
         tb_terminal = highlight(msg, SqlErrorLexer(), TerminalFormatter())
 

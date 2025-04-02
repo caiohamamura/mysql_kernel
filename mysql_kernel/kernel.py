@@ -190,7 +190,7 @@ class MysqlKernel(Kernel):
             return self.handle_error(e)
         
     def handle_error(self, e): 
-        search_res = re.search(r'\d+,[^"']*["']([^"']+)', e.args[0]).group(1)
+        search_res = re.search(r'\d+,[^"\']*["\']([^"\']+)', e.args[0]).group(1)
         msg = str(e)
         if search_res and search_res.last_index >= 1:
             msg = search_res.group(1)

@@ -2,9 +2,30 @@ import pandas as pd
 import sqlalchemy as sa
 from ipykernel.kernelbase import Kernel
 import re
-
+from .autocomplete import SQLAutocompleter
+import logging
+import traceback
+from pygments import highlight
+from pygments.lexers.python import PythonLexer
+from pygments.formatters import HtmlFormatter, TerminalFormatter
+from .pygment_error_lexer import SqlErrorLexer
+from .style import ThisStyle
 
 __version__ = '0.4.1'
+
+class FixedWidthHtmlFormatter(HtmlFormatter):
+
+    def wrap(self, source):
+        return self._wrap_code(source)
+
+    def _wrap_code(self, source):
+        yield 0, '<p style="max-width: 120ch;overflow-wrap: break-word;text-align:left">'
+        for i, t in source:
+            if i == 1:
+                # it's a line of formatted code
+                t += '<br>'
+            yield i, t
+        yield 0, '</p>'
 
 class MysqlKernel(Kernel):
     implementation = 'mysql_kernel'
@@ -19,11 +40,19 @@ class MysqlKernel(Kernel):
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
         self.engine = False
+        self.log.setLevel(logging.DEBUG)
+        print('Mysql kernel initialized')
+        self.log.info('Mysql kernel initialized')
         
-    def output(self, output):
+    def output(self, output, plain_text = None):
+        if plain_text == None:
+            plain_text = output
         if not self.silent:
             display_content = {'source': 'kernel',
-                               'data': {'text/html': output},
+                               'data': {
+                                   'text/html': output,
+                                   'text/plain': plain_text,
+                                },
                                'metadata': {}}
             self.send_response(self.iopub_socket, 'display_data', display_content)
     
@@ -54,33 +83,35 @@ class MysqlKernel(Kernel):
                     self.output(msg  % (object_name))
                 return
         except Exception as msg:
-            self.output(str(msg))
-            return
+            return self.handle_error(msg)
 
     def create_db(self, query):
-        self.generic_ddl(query, 'Database %s created successfully.')
+        return self.generic_ddl(query, 'Database %s created successfully.')
         
 
     def drop_db(self, query):
-        self.generic_ddl(query, 'Database %s dropped successfully.')
+        return self.generic_ddl(query, 'Database %s dropped successfully.')
         
     def create_table(self, query):
-        self.generic_ddl(query, 'Table %s created successfully.')
+        return self.generic_ddl(query, 'Table %s created successfully.')
         
     def drop_table(self, query):
-        self.generic_ddl(query, 'Table %s dropped successfully.')
+        return self.generic_ddl(query, 'Table %s dropped successfully.')
 
     def delete(self, query):
-        self.generic_ddl(query, 'Data deleted from %s successfully.')
+        return self.generic_ddl(query, 'Data deleted from %s successfully.')
     
     def alter_table(self, query):
-        self.generic_ddl(query, 'Table %s altered successfully.')
+        return self.generic_ddl(query, 'Table %s altered successfully.')
     
     def insert_into(self, query):
-        self.generic_ddl(query, 'Data inserted into %s successfully.')
+        return self.generic_ddl(query, 'Data inserted into %s successfully.')
     
     def use_db(self, query):
-        self.generic_ddl(query, 'Changed to database %s successfully.')
+        new_database = re.match("use ([^ ]+)", query, re.IGNORECASE).group(1)
+        self.engine = sa.create_engine(self.engine.url.set(database=new_database))
+        self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
+        return self.generic_ddl(query, 'Changed to database %s successfully.')
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
         self.silent = silent
@@ -88,6 +119,7 @@ class MysqlKernel(Kernel):
         if not code.strip():
             return self.ok()
         sql = code.rstrip()+('' if code.rstrip().endswith(";") else ';')
+        results_raw = None
         try:
             for v in sql.split(";"):
                 v = v.rstrip()
@@ -99,30 +131,36 @@ class MysqlKernel(Kernel):
                         if l.count('@')>1:
                             self.output("Connection failed, The Mysql address cannot have two '@'.")
                         else:
-                            self.engine = sa.create_engine(f'mysql+py{v}')
+                            if v.startswith('mysql://'):
+                                v = v.replace('mysql://', 'mysql+pymysql://')
+                            self.engine = sa.create_engine(v)
+                            self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
                             self.output('Connected successfully!')
+                            
+                            
                     elif l.startswith('create database '):
-                        self.create_db(v)
+                        return self.create_db(v)
                     elif l.startswith('drop database '):
-                        self.drop_db(v)
+                        return self.drop_db(v)
                     elif l.startswith('create table '):
-                        self.create_table(v)
+                        return self.create_table(v)
                     elif l.startswith('drop table '):
-                        self.drop_table(v)
+                        return self.drop_table(v)
                     elif l.startswith('delete '):
-                        self.delete(v)
+                        return self.delete(v)
                     elif l.startswith('alter table '):
-                        self.alter_table(v)
+                        return self.alter_table(v)
                     elif l.startswith('use '):
-                        self.use_db(v)
+                        return self.use_db(v)
                     elif l.startswith('insert into '):
-                        self.insert_into(v)
+                        return self.insert_into(v)
                     else:
                         if self.engine:
                             v = re.sub('(?<!%)%(?!%)', '%%', v)
                             if l.startswith('select ') and 'limit ' not in l:
                                 v = f'{v} limit 1000'
                                 results = pd.read_sql(v, self.engine)
+                                results_raw = results.to_string()
                                 if results.shape[0] == 1000:
                                     output = f'''
                                         <p>Results limitted to 1000 (explicitly add LIMIT to display beyond that)</p>
@@ -131,12 +169,79 @@ class MysqlKernel(Kernel):
                                 else:
                                     output = results.to_html()
                             else:
-                                output = pd.read_sql(v, self.engine).to_html()
+                                with self.engine.begin() as con:
+                                    execution = con.execute(sa.sql.text(v))
+                                    if execution.returns_rows:
+                                        results = pd.DataFrame(execution.fetchall(), columns=execution.keys())
+                                        output = results.to_html()
+                                    elif execution.rowcount > 0:
+                                        output = f'Rows affected: {execution.rowcount}'
+                                    else:
+                                        output = 'No rows affected'
                             output = f'''<div style='max-height: 500px; overflow: auto; width: 100%'>{output}</div>'''
                         else:
                             output = 'Unable to connect to Mysql server. Check that the server is running.'
-                        self.output(output)
+                        self.output(output, plain_text = results_raw if results_raw else output)
             return self.ok()
-        except Exception as msg:
-            self.output(str(msg))
-            return self.err('Error executing code ' + sql)
+        except Exception as e:
+            return self.handle_error(e)
+        
+    def handle_error(self, e): 
+        msg = re.search(r'\d+,[^"]*"([^"]+)', e.args[0]).group(1)
+
+        # Convert to HTML with Pygments
+        formatter = FixedWidthHtmlFormatter(full=True, style=ThisStyle, traceback=False)
+        tb_html = highlight("ERROR: " + msg, SqlErrorLexer(), formatter)
+        tb_terminal = highlight(msg, SqlErrorLexer(), TerminalFormatter())
+
+        # Send formatted traceback as an HTML response
+        self.send_response(
+                self.iopub_socket,
+                "display_data",
+                {
+                    "data": {
+                        "text/html": tb_html,
+                        "text/plain": tb_terminal
+                    },
+                    "metadata": {}
+                },
+            )
+        return {"status": "error", "execution_count": self.execution_count}
+    
+    def do_complete(self, code, cursor_pos):
+        self.log.info('Try to autocomplete')
+        if not self.autocompleter:
+            return {"status": "ok", "matches": []}
+        completion_list = self.autocompleter.get_completions(code, cursor_pos)
+        # match_text_list = [completion.text for completion in completion_list]
+        # offset = 0
+        # if len(completion_list) > 0:
+        #     offset = completion_list[
+        #         0
+        #     ].start_position  # if match part is 'sel', then start_position would be -3
+        # type_dict_list = []
+        # for completion in completion_list:
+        #     if completion.display_meta is not None:
+        #         type_dict_list.append(
+        #             {
+        #                 "start": completion.start_position,
+        #                 "end": len(completion.text) + completion.start_position,
+        #                 "text": completion.text,
+        #                 # display_meta is FormattedText object
+        #                 "type": completion.display_meta_text,
+        #             }
+        #         )
+
+        cursor_offset = 0
+
+        word_completing = re.search('[^ ]+$',code[:cursor_pos])
+        if word_completing:
+            cursor_offset += len(word_completing.group(0))
+
+        return {
+            "status": "ok",
+            "matches": completion_list,
+            "cursor_start": cursor_pos - cursor_offset,
+            "cursor_end": cursor_pos,
+            "metadata": {},
+        }

@@ -109,7 +109,11 @@ class MysqlKernel(Kernel):
     
     def use_db(self, query):
         new_database = re.match("use ([^ ]+)", query, re.IGNORECASE).group(1)
-        self.engine = sa.create_engine(self.engine.url.set(database=new_database), isolation_level='AUTOCOMMIT')
+        if self.engine.url.engine == 'duckdb':
+            self.engine = sa.create_engine(self.engine.url.set(database=new_database))
+        else:
+            self.engine = sa.create_engine(self.engine.url.set(database=new_database), isolation_level='AUTOCOMMIT')
+
         self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
         return self.generic_ddl(query, 'Changed to database %s successfully.')
 
@@ -134,7 +138,10 @@ class MysqlKernel(Kernel):
                         else:
                             if v.startswith('mysql://'):
                                 v = v.replace('mysql://', 'mysql+pymysql://')
-                            self.engine = sa.create_engine(v, isolation_level='AUTOCOMMIT')
+                            if (v.startswith('duckdb')):
+                                self.engine = sa.create_engine(v)
+                            else:
+                                self.engine = sa.create_engine(v, isolation_level='AUTOCOMMIT')
                             self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
                             self.output('Connected successfully!')
                             

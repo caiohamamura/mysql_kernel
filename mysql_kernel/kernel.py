@@ -132,7 +132,7 @@ class MysqlKernel(Kernel):
                 v = re.sub('\n* *--.*\n', '', v) # remove comments
                 l = v.lower()
                 if len(l)>0:
-                    if re.search('\w+://', l):
+                    if re.search(r'\w+://', l):
                         if l.count('@')>1:
                             self.output("Connection failed, The Mysql address cannot have two '@'.")
                         else:

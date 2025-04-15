@@ -10,13 +10,13 @@ def readme():
         return f.read()
 
 setup(name='mysql_kernel',
-      version='0.5.0',
-      description='A mysql kernel for Jupyter.',
+      version='0.5.1',
+      description='A generic kernel for Jupyter forked from JinQing Lees mysql_kernel',
       long_description=readme(),
       long_description_content_type='text/markdown',
       url='https://github.com/Hourout/mysql_kernel',
-      author='JinQing Lee',
-      author_email='hourout@163.com',
+      author='Caio Hamamura',
+      author_email='caiohamamura@gmail.com',
       keywords=['jupyter_kernel', 'mysql_kernel'],
       license='Apache License Version 2.0',
       install_requires=['pymysql', 'sqlalchemy', 'pandas', 'jupyter','pygments>=2.12'],

@@ -109,7 +109,7 @@ class MysqlKernel(Kernel):
     
     def use_db(self, query):
         new_database = re.match("use ([^ ]+)", query, re.IGNORECASE).group(1)
-        if self.engine.url.engine == 'duckdb':
+        if self.engine.url.drivername == 'duckdb':
             self.engine = sa.create_engine(self.engine.url.set(database=new_database))
         else:
             self.engine = sa.create_engine(self.engine.url.set(database=new_database), isolation_level='AUTOCOMMIT')

@@ -1,0 +1,89 @@
+# Tradução em Português do Brasil para kernel jupyter para SQL
+# Copyright (C) 2025
+# Este arquivo é distribuído sob a mesma licença do pacote.
+# Tradutor: Caio Hamamura <seu@email.com>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: kernel-mysql 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-21 15:46-0300\n"
+"PO-Revision-Date: 2025-04-21 15:50-0300\n"
+"Last-Translator: Caio Hamamura <caiohamamura@gmail.com>\n"
+"Language-Team: Português Brasileiro <LL@li.org>\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: kernel.py:51 kernel.py:52
+msgid "Mysql kernel initialized"
+msgstr "Kernel do MySQL inicializado"
+
+#: kernel.py:88 kernel.py:195
+msgid "Rows affected"
+msgstr "Linhas afetadas"
+
+#: kernel.py:97
+#, python-format
+msgid "Database %s created successfully."
+msgstr "Banco de dados %s criado com sucesso."
+
+#: kernel.py:101
+#, python-format
+msgid "Database %s dropped successfully."
+msgstr "Banco de dados %s removido com sucesso."
+
+#: kernel.py:104
+#, python-format
+msgid "Table %s created successfully."
+msgstr "Tabela %s criada com sucesso."
+
+#: kernel.py:107
+#, python-format
+msgid "Table %s dropped successfully."
+msgstr "Tabela %s removida com sucesso."
+
+#: kernel.py:110
+#, python-format
+msgid "Data deleted from %s successfully."
+msgstr "Dados excluídos de %s com sucesso."
+
+#: kernel.py:113
+#, python-format
+msgid "Table %s altered successfully."
+msgstr "Tabela %s alterada com sucesso."
+
+#: kernel.py:116
+#, python-format
+msgid "Data inserted into %s successfully."
+msgstr "Dados inseridos em %s com sucesso."
+
+#: kernel.py:126
+#, python-format
+msgid "Changed to database %s successfully."
+msgstr "Mudança para o banco de dados %s concluída com sucesso."
+
+#: kernel.py:145
+msgid "Connection failed, The Mysql address cannot have two '@'."
+msgstr "Falha na conexão: o endereço do MySQL não pode conter dois '@'."
+
+#: kernel.py:154
+msgid "Connected successfully!"
+msgstr "Conectado com sucesso!"
+
+#: kernel.py:156
+msgid "Please connect to a database first!"
+msgstr "Por favor, conecte-se a um banco de dados primeiro!"
+
+#: kernel.py:181
+msgid "Results truncated to 1000 (explicitly add LIMIT to display beyond that)"
+msgstr "Resultados truncados para 1000 (adicione LIMIT explicitamente para exibir mais)"
+
+#: kernel.py:198
+msgid "No rows affected"
+msgstr "Nenhuma linha afetada"
+
+#: kernel.py:201
+msgid "Unable to connect to Mysql server. Check that the server is running."
+msgstr "Não foi possível conectar ao servidor MySQL. Verifique se o servidor está em execução."

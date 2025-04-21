@@ -34,5 +34,6 @@ setup(name='mysql_kernel',
           'Topic :: System :: Shells',
       ],
       packages=['mysql_kernel'],
+      include_package_data=True,
       zip_safe=False
 )

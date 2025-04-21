@@ -1,0 +1,3 @@
+recursive-include mysql_kernel/locale *.mo
+recursive-include mysql_kernel/locale *.po
+

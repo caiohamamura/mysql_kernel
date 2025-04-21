@@ -10,6 +10,10 @@ from pygments.lexers.python import PythonLexer
 from pygments.formatters import HtmlFormatter, TerminalFormatter
 from .pygment_error_lexer import SqlErrorLexer
 from .style import ThisStyle
+from .i18n import get_translator
+
+_ = get_translator()
+
 
 __version__ = '0.4.1'
 
@@ -41,8 +45,8 @@ class MysqlKernel(Kernel):
         Kernel.__init__(self, **kwargs)
         self.engine = False
         self.log.setLevel(logging.DEBUG)
-        print('Mysql kernel initialized')
-        self.log.info('Mysql kernel initialized')
+        print(_('Mysql kernel initialized'))
+        self.log.info(_('Mysql kernel initialized'))
         
     def output(self, output, plain_text = None):
         if plain_text == None:
@@ -78,7 +82,8 @@ class MysqlKernel(Kernel):
                     object_name = query.split()[1]
                 rows_affected = result.rowcount
                 if result.rowcount > 0:
-                    self.output((msg + '\nRows affected: %d.') % (object_name, rows_affected))
+                    msgpart = _('Rows affected')
+                    self.output((msg + f'\n{msgpart}: %d.') % (object_name, rows_affected))
                 else:
                     self.output(msg  % (object_name))
                 return
@@ -86,26 +91,26 @@ class MysqlKernel(Kernel):
             return self.handle_error(msg)
 
     def create_db(self, query):
-        return self.generic_ddl(query, 'Database %s created successfully.')
+        return self.generic_ddl(query, _('Database %s created successfully.'))
         
 
     def drop_db(self, query):
-        return self.generic_ddl(query, 'Database %s dropped successfully.')
+        return self.generic_ddl(query, _('Database %s dropped successfully.'))
         
     def create_table(self, query):
-        return self.generic_ddl(query, 'Table %s created successfully.')
+        return self.generic_ddl(query, _('Table %s created successfully.'))
         
     def drop_table(self, query):
-        return self.generic_ddl(query, 'Table %s dropped successfully.')
+        return self.generic_ddl(query, _('Table %s dropped successfully.'))
 
     def delete(self, query):
-        return self.generic_ddl(query, 'Data deleted from %s successfully.')
+        return self.generic_ddl(query, _('Data deleted from %s successfully.'))
     
     def alter_table(self, query):
-        return self.generic_ddl(query, 'Table %s altered successfully.')
+        return self.generic_ddl(query, _('Table %s altered successfully.'))
     
     def insert_into(self, query):
-        return self.generic_ddl(query, 'Data inserted into %s successfully.')
+        return self.generic_ddl(query, _('Data inserted into %s successfully.'))
     
     def use_db(self, query):
         new_database = re.match("use ([^ ]+)", query, re.IGNORECASE).group(1)
@@ -115,7 +120,7 @@ class MysqlKernel(Kernel):
             self.engine = sa.create_engine(self.engine.url.set(database=new_database), isolation_level='AUTOCOMMIT')
 
         self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
-        return self.generic_ddl(query, 'Changed to database %s successfully.')
+        return self.generic_ddl(query, _('Changed to database %s successfully.'))
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
         self.silent = silent
@@ -134,7 +139,7 @@ class MysqlKernel(Kernel):
                 if len(l)>0:
                     if re.search(r'\w+://', l):
                         if l.count('@')>1:
-                            self.output("Connection failed, The Mysql address cannot have two '@'.")
+                            self.output(_("Connection failed, The Mysql address cannot have two '@'."))
                         else:
                             if v.startswith('mysql://'):
                                 v = v.replace('mysql://', 'mysql+pymysql://')
@@ -143,9 +148,9 @@ class MysqlKernel(Kernel):
                             else:
                                 self.engine = sa.create_engine(v, isolation_level='AUTOCOMMIT')
                             self.autocompleter = SQLAutocompleter(engine=self.engine, log=self.log)
-                            self.output('Connected successfully!')
-                            
-                            
+                            self.output(_('Connected successfully!'))
+                    elif self.engine == False:
+                        self.output(_('Please connect to a database first!'))
                     elif l.startswith('create database '):
                         res = self.create_db(v)
                     elif l.startswith('drop database '):
@@ -170,8 +175,9 @@ class MysqlKernel(Kernel):
                                 results = pd.read_sql(v, self.engine)
                                 results_raw = results.to_string()
                                 if results.shape[0] == 1000:
+                                    msg_part = _('Results truncated to 1000 (explicitly add LIMIT to display beyond that)')
                                     output = f'''
-                                        <p>Results limitted to 1000 (explicitly add LIMIT to display beyond that)</p>
+                                        <p>{msg_part}</p>
                                         {results.to_html()}
                                         '''
                                 else:
@@ -183,12 +189,13 @@ class MysqlKernel(Kernel):
                                         results = pd.DataFrame(execution.fetchall(), columns=execution.keys())
                                         output = results.to_html()
                                     elif execution.rowcount > 0:
-                                        output = f'Rows affected: {execution.rowcount}'
+                                        msg_part = _('Rows affected')
+                                        output = f'{msg_part}: {execution.rowcount}'
                                     else:
-                                        output = 'No rows affected'
+                                        output = _('No rows affected')
                             output = f'''<div style='max-height: 500px; overflow: auto; width: 100%'>{output}</div>'''
                         else:
-                            output = 'Unable to connect to Mysql server. Check that the server is running.'
+                            output = _('Unable to connect to Mysql server. Check that the server is running.')
                         self.output(output, plain_text = results_raw if results_raw else output)
                 if res and 'status' in res.keys() and res['status'] == 'error':
                     return res
@@ -225,7 +232,6 @@ class MysqlKernel(Kernel):
         return {"status": "error", "execution_count": self.execution_count}
     
     def do_complete(self, code, cursor_pos):
-        self.log.info('Try to autocomplete')
         if not self.autocompleter:
             return {"status": "ok", "matches": []}
         completion_list = self.autocompleter.get_completions(code, cursor_pos)

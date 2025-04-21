@@ -10,7 +10,7 @@ def readme():
         return f.read()
 
 setup(name='mysql_kernel',
-      version='0.5.1',
+      version='0.6.0',
       description='A generic kernel for Jupyter forked from JinQing Lees mysql_kernel',
       long_description=readme(),
       long_description_content_type='text/markdown',
